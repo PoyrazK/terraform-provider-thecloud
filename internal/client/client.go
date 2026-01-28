@@ -391,3 +391,144 @@ func (c *Client) RemoveSecurityRule(ruleID string) error {
 
 	return nil
 }
+
+// LoadBalancer represents the API response for a Load Balancer
+type LoadBalancer struct {
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	VpcID     string     `json:"vpc_id"`
+	Port      int        `json:"port"`
+	Algorithm string     `json:"algorithm"`
+	Status    string     `json:"status"`
+	Targets   []LBTarget `json:"targets,omitempty"`
+}
+
+// LBTarget represents a target within a Load Balancer
+type LBTarget struct {
+	InstanceID string `json:"instance_id"`
+	Port       int    `json:"port"`
+	Weight     int    `json:"weight"`
+}
+
+func (c *Client) CreateLoadBalancer(name, vpcID string, port int, algorithm string) (*LoadBalancer, error) {
+	payload := map[string]interface{}{
+		"name":      name,
+		"vpc_id":    vpcID,
+		"port":      port,
+		"algorithm": algorithm,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", c.BuildURL("/lb"), bytes.NewBuffer(body))
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusAccepted && resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var lb LoadBalancer
+	if err := json.NewDecoder(resp.Body).Decode(&lb); err != nil {
+		return nil, err
+	}
+
+	return &lb, nil
+}
+
+func (c *Client) GetLoadBalancer(id string) (*LoadBalancer, error) {
+	req, _ := http.NewRequest("GET", c.BuildURL(fmt.Sprintf("/lb/%s", id)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var lb LoadBalancer
+	if err := json.NewDecoder(resp.Body).Decode(&lb); err != nil {
+		return nil, err
+	}
+
+	// Also fetch targets
+	targets, _ := c.ListLBTargets(id)
+	lb.Targets = targets
+
+	return &lb, nil
+}
+
+func (c *Client) DeleteLoadBalancer(id string) error {
+	req, _ := http.NewRequest("DELETE", c.BuildURL(fmt.Sprintf("/lb/%s", id)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (c *Client) AddLBTarget(lbID string, target LBTarget) error {
+	body, _ := json.Marshal(target)
+
+	req, _ := http.NewRequest("POST", c.BuildURL(fmt.Sprintf("/lb/%s/targets", lbID)), bytes.NewBuffer(body))
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (c *Client) RemoveLBTarget(lbID, instanceID string) error {
+	req, _ := http.NewRequest("DELETE", c.BuildURL(fmt.Sprintf("/lb/%s/targets/%s", lbID, instanceID)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (c *Client) ListLBTargets(lbID string) ([]LBTarget, error) {
+	req, _ := http.NewRequest("GET", c.BuildURL(fmt.Sprintf("/lb/%s/targets", lbID)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var targets []LBTarget
+	if err := json.NewDecoder(resp.Body).Decode(&targets); err != nil {
+		return nil, err
+	}
+
+	return targets, nil
+}
