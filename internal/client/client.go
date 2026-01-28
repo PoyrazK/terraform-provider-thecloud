@@ -606,3 +606,71 @@ func (c *Client) DeleteSecret(id string) error {
 
 	return nil
 }
+
+// APIKey represents the API response for an API Key
+type APIKey struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Key       string `json:"key,omitempty"`
+	CreatedAt string `json:"created_at"`
+}
+
+func (c *Client) CreateAPIKey(name string) (*APIKey, error) {
+	payload := map[string]string{
+		"name": name,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", c.BuildURL("/auth/keys"), bytes.NewBuffer(body))
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var key APIKey
+	if err := json.NewDecoder(resp.Body).Decode(&key); err != nil {
+		return nil, err
+	}
+
+	return &key, nil
+}
+
+func (c *Client) ListAPIKeys() ([]APIKey, error) {
+	req, _ := http.NewRequest("GET", c.BuildURL("/auth/keys"), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var keys []APIKey
+	if err := json.NewDecoder(resp.Body).Decode(&keys); err != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}
+
+func (c *Client) RevokeAPIKey(id string) error {
+	req, _ := http.NewRequest("DELETE", c.BuildURL(fmt.Sprintf("/auth/keys/%s", id)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	return nil
+}

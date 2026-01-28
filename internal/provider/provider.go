@@ -100,6 +100,7 @@ func (p *TheCloudProvider) Resources(ctx context.Context) []func() resource.Reso
 		resources.NewLoadBalancerResource,
 		resources.NewLoadBalancerTargetResource,
 		resources.NewSecretResource,
+		resources.NewApiKeyResource,
 	}
 }
 
