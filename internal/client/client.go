@@ -89,7 +89,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 	if err != nil {
 		return 0, err
 	}
-	defer func() { _ = resp.Body.Close() }()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode == http.StatusNotFound {
 		return resp.StatusCode, nil

@@ -11,7 +11,7 @@ import (
 
 // Run the docs generation tool, check its usage at
 // https://github.com/hashicorp/terraform-plugin-docs
-//go:generate tfplugindocs generate --provider-name thecloud
+//go:generate go run github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs generate --provider-name thecloud
 
 func main() {
 	var debug bool
