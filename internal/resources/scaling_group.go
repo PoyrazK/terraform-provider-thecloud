@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -96,6 +97,9 @@ func (r *ScalingGroupResource) Schema(ctx context.Context, req resource.SchemaRe
 			"status": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The status of the scaling group.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -150,6 +154,16 @@ func (r *ScalingGroupResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	data.ID = types.StringValue(group.ID)
+	if !data.Ports.IsNull() || group.Ports != "" {
+		data.Ports = types.StringValue(group.Ports)
+	} else {
+		data.Ports = types.StringNull()
+	}
+	if !data.LoadBalancerID.IsNull() || group.LoadBalancerID != "" {
+		data.LoadBalancerID = types.StringValue(group.LoadBalancerID)
+	} else {
+		data.LoadBalancerID = types.StringNull()
+	}
 	data.Status = types.StringValue(group.Status)
 
 	tflog.Trace(ctx, "created a Scaling Group resource")
@@ -180,9 +194,17 @@ func (r *ScalingGroupResource) Read(ctx context.Context, req resource.ReadReques
 	data.ID = types.StringValue(group.ID)
 	data.Name = types.StringValue(group.Name)
 	data.VpcID = types.StringValue(group.VpcID)
-	data.LoadBalancerID = types.StringValue(group.LoadBalancerID)
+	if !data.LoadBalancerID.IsNull() || group.LoadBalancerID != "" {
+		data.LoadBalancerID = types.StringValue(group.LoadBalancerID)
+	} else {
+		data.LoadBalancerID = types.StringNull()
+	}
 	data.Image = types.StringValue(group.Image)
-	data.Ports = types.StringValue(group.Ports)
+	if !data.Ports.IsNull() || group.Ports != "" {
+		data.Ports = types.StringValue(group.Ports)
+	} else {
+		data.Ports = types.StringNull()
+	}
 	data.MinInstances = types.Int64Value(int64(group.MinInstances))
 	data.MaxInstances = types.Int64Value(int64(group.MaxInstances))
 	data.DesiredCount = types.Int64Value(int64(group.DesiredCount))
@@ -208,6 +230,31 @@ func (r *ScalingGroupResource) Delete(ctx context.Context, req resource.DeleteRe
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete scaling group, got error: %s", err))
 		return
+	}
+
+	// Wait for group to be gone from API (async deletion in backend)
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			resp.Diagnostics.AddError("Delete Timeout", "Timed out waiting for scaling group to be deleted.")
+			return
+		case <-ticker.C:
+			group, err := r.client.GetScalingGroup(ctx, data.ID.ValueString())
+			if err != nil {
+				resp.Diagnostics.AddError(errClient, fmt.Sprintf("Error checking scaling group status: %s", err))
+				return
+			}
+			if group == nil {
+				tflog.Trace(ctx, "scaling group successfully deleted")
+				return
+			}
+		}
 	}
 }
 

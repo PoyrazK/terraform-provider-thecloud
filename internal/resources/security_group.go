@@ -107,7 +107,11 @@ func (r *SecurityGroupResource) Create(ctx context.Context, req resource.CreateR
 	data.ID = types.StringValue(sg.ID)
 	data.VpcID = types.StringValue(sg.VPCID)
 	data.Name = types.StringValue(sg.Name)
-	data.Description = types.StringValue(sg.Description)
+	if !data.Description.IsNull() || sg.Description != "" {
+		data.Description = types.StringValue(sg.Description)
+	} else {
+		data.Description = types.StringNull()
+	}
 
 	tflog.Trace(ctx, "created a Security Group resource")
 
@@ -137,7 +141,11 @@ func (r *SecurityGroupResource) Read(ctx context.Context, req resource.ReadReque
 	data.ID = types.StringValue(sg.ID)
 	data.VpcID = types.StringValue(sg.VPCID)
 	data.Name = types.StringValue(sg.Name)
-	data.Description = types.StringValue(sg.Description)
+	if !data.Description.IsNull() || sg.Description != "" {
+		data.Description = types.StringValue(sg.Description)
+	} else {
+		data.Description = types.StringNull()
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }

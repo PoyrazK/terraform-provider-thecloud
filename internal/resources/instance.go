@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -29,13 +30,14 @@ type InstanceResource struct {
 
 // InstanceResourceModel describes the resource data model.
 type InstanceResourceModel struct {
-	ID        types.String `tfsdk:"id"`
-	Name      types.String `tfsdk:"name"`
-	Image     types.String `tfsdk:"image"`
-	Ports     types.String `tfsdk:"ports"`
-	VpcID     types.String `tfsdk:"vpc_id"`
-	Status    types.String `tfsdk:"status"`
-	IPAddress types.String `tfsdk:"ip_address"`
+	ID        types.String   `tfsdk:"id"`
+	Name      types.String   `tfsdk:"name"`
+	Image     types.String   `tfsdk:"image"`
+	Ports     types.String   `tfsdk:"ports"`
+	VpcID     types.String   `tfsdk:"vpc_id"`
+	Status    types.String   `tfsdk:"status"`
+	IPAddress types.String   `tfsdk:"ip_address"`
+	Timeouts  timeouts.Value `tfsdk:"timeouts"`
 }
 
 func (r *InstanceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -81,6 +83,10 @@ func (r *InstanceResource) Schema(ctx context.Context, req resource.SchemaReques
 				Computed:            true,
 				MarkdownDescription: "The IP address of the instance.",
 			},
+			"timeouts": timeouts.Attributes(ctx, timeouts.Opts{
+				Create: true,
+				Delete: true,
+			}),
 		},
 	}
 }
@@ -129,8 +135,16 @@ func (r *InstanceResource) Create(ctx context.Context, req resource.CreateReques
 	data.ID = types.StringValue(instance.ID)
 	data.Name = types.StringValue(instance.Name)
 	data.Image = types.StringValue(instance.Image)
-	data.Ports = types.StringValue(instance.Ports)
-	data.VpcID = types.StringValue(instance.VpcID)
+	if !data.Ports.IsNull() || instance.Ports != "" {
+		data.Ports = types.StringValue(instance.Ports)
+	} else {
+		data.Ports = types.StringNull()
+	}
+	if !data.VpcID.IsNull() || instance.VpcID != "" {
+		data.VpcID = types.StringValue(instance.VpcID)
+	} else {
+		data.VpcID = types.StringNull()
+	}
 	data.Status = types.StringValue(instance.Status)
 	data.IPAddress = types.StringValue(instance.IPAddress)
 
@@ -162,8 +176,16 @@ func (r *InstanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 	data.ID = types.StringValue(instance.ID)
 	data.Name = types.StringValue(instance.Name)
 	data.Image = types.StringValue(instance.Image)
-	data.Ports = types.StringValue(instance.Ports)
-	data.VpcID = types.StringValue(instance.VpcID)
+	if !data.Ports.IsNull() || instance.Ports != "" {
+		data.Ports = types.StringValue(instance.Ports)
+	} else {
+		data.Ports = types.StringNull()
+	}
+	if !data.VpcID.IsNull() || instance.VpcID != "" {
+		data.VpcID = types.StringValue(instance.VpcID)
+	} else {
+		data.VpcID = types.StringNull()
+	}
 	data.Status = types.StringValue(instance.Status)
 	data.IPAddress = types.StringValue(instance.IPAddress)
 

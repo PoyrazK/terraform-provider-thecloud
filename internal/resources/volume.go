@@ -66,6 +66,9 @@ func (r *VolumeResource) Schema(ctx context.Context, req resource.SchemaRequest,
 			"status": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The status of the volume.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
