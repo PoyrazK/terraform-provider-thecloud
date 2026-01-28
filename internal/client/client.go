@@ -674,3 +674,78 @@ func (c *Client) RevokeAPIKey(id string) error {
 
 	return nil
 }
+
+// ScalingGroup represents the API response for an Auto-Scaling Group
+type ScalingGroup struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	VpcID          string `json:"vpc_id"`
+	LoadBalancerID string `json:"load_balancer_id,omitempty"`
+	Image          string `json:"image"`
+	Ports          string `json:"ports"`
+	MinInstances   int    `json:"min_instances"`
+	MaxInstances   int    `json:"max_instances"`
+	DesiredCount   int    `json:"desired_count"`
+	Status         string `json:"status"`
+}
+
+func (c *Client) CreateScalingGroup(params map[string]interface{}) (*ScalingGroup, error) {
+	body, _ := json.Marshal(params)
+
+	req, _ := http.NewRequest("POST", c.BuildURL("/autoscaling/groups"), bytes.NewBuffer(body))
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var group ScalingGroup
+	if err := json.NewDecoder(resp.Body).Decode(&group); err != nil {
+		return nil, err
+	}
+
+	return &group, nil
+}
+
+func (c *Client) GetScalingGroup(id string) (*ScalingGroup, error) {
+	req, _ := http.NewRequest("GET", c.BuildURL(fmt.Sprintf("/autoscaling/groups/%s", id)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil // Not found
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var group ScalingGroup
+	if err := json.NewDecoder(resp.Body).Decode(&group); err != nil {
+		return nil, err
+	}
+
+	return &group, nil
+}
+
+func (c *Client) DeleteScalingGroup(id string) error {
+	req, _ := http.NewRequest("DELETE", c.BuildURL(fmt.Sprintf("/autoscaling/groups/%s", id)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	return nil
+}
