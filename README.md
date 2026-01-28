@@ -1,8 +1,5 @@
 # Terraform Provider for "The Cloud"
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/PoyrazK/terraform-provider-thecloud)](https://goreportcard.com/report/github.com/PoyrazK/terraform-provider-thecloud)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 A Terraform provider for managing resources on **The Cloud** platform. This provider allows you to define your cloud infrastructure (VPCs, Instances, Load Balancers, etc.) as code using HashiCorp Configuration Language (HCL).
 
 ## 🚀 Quick Start
