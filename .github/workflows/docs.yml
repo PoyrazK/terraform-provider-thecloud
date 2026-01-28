@@ -1,0 +1,29 @@
+name: Docs
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Generate docs
+        run: go generate ./...
+
+      - name: Check for changes
+        run: |
+          git diff --exit-code || (echo "Docs are out of date. Please run 'go generate ./...' and commit the changes." && exit 1)
