@@ -22,7 +22,9 @@ jobs:
           cache: true
 
       - name: Generate docs
-        run: go generate ./...
+        run: |
+          go install github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs@latest
+          go generate ./...
 
       - name: Check for changes
         run: |
