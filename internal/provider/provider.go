@@ -110,6 +110,8 @@ func (p *TheCloudProvider) DataSources(ctx context.Context) []func() datasource.
 	return []func() datasource.DataSource{
 		datasources.NewVpcDataSource,
 		datasources.NewVpcsDataSource,
+		datasources.NewInstanceDataSource,
+		datasources.NewInstancesDataSource,
 	}
 }
 
