@@ -132,5 +132,5 @@ func (d *VpcDataSource) lookupVpcByName(ctx context.Context, name string) (*clie
 		}
 	}
 
-	return nil, nil
+	return nil, nil //nolint:nilnil
 }

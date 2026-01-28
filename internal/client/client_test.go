@@ -24,19 +24,22 @@ func TestClientCreateVPC(t *testing.T) {
 		assert.Equal(t, testKey, r.Header.Get("X-API-Key"))
 
 		var payload map[string]string
-		json.NewDecoder(r.Body).Decode(&payload)
+		err := json.NewDecoder(r.Body).Decode(&payload)
+		assert.NoError(t, err)
 		assert.Equal(t, testVpcName, payload["name"])
 
 		w.WriteHeader(http.StatusCreated)
-		data, _ := json.Marshal(VPC{
+		data, err := json.Marshal(VPC{
 			ID:        testVpcID,
 			Name:      testVpcName,
 			CIDRBlock: testCIDR,
 			Status:    "available",
 		})
-		json.NewEncoder(w).Encode(APIResponse{
+		assert.NoError(t, err)
+		err = json.NewEncoder(w).Encode(APIResponse{
 			Data: data,
 		})
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -55,15 +58,17 @@ func TestClientGetVPC(t *testing.T) {
 		assert.Equal(t, "GET", r.Method)
 
 		w.WriteHeader(http.StatusOK)
-		data, _ := json.Marshal(VPC{
+		data, err := json.Marshal(VPC{
 			ID:        testVpcID,
 			Name:      testVpcName,
 			CIDRBlock: testCIDR,
 			Status:    "available",
 		})
-		json.NewEncoder(w).Encode(APIResponse{
+		assert.NoError(t, err)
+		err = json.NewEncoder(w).Encode(APIResponse{
 			Data: data,
 		})
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -93,9 +98,10 @@ func TestClientDeleteVPC(t *testing.T) {
 		assert.Equal(t, "/vpcs/"+testVpcID, r.URL.Path)
 		assert.Equal(t, "DELETE", r.Method)
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(APIResponse{
+		err := json.NewEncoder(w).Encode(APIResponse{
 			Data: json.RawMessage(`{"message": "deleted"}`),
 		})
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 
@@ -108,13 +114,14 @@ func TestClientDeleteVPC(t *testing.T) {
 func TestClientError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(APIResponse{
+		err := json.NewEncoder(w).Encode(APIResponse{
 			Error: &APIError{
 				Type:    "invalid_input",
 				Message: "invalid cidr",
 				Code:    "400",
 			},
 		})
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 

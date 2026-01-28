@@ -67,19 +67,19 @@ func (c *Client) BuildURL(path string) string {
 	return fmt.Sprintf("%s%s", c.Endpoint, path)
 }
 
-func (c *Client) do(ctx context.Context, method, path string, body interface{}, v interface{}) (*http.Response, error) {
+func (c *Client) do(ctx context.Context, method, path string, body interface{}, v interface{}) (int, error) {
 	var bodyReader io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
 		if err != nil {
-			return nil, err
+			return 0, err
 		}
 		bodyReader = bytes.NewBuffer(b)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, c.BuildURL(path), bodyReader)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	req.Header.Set("X-API-Key", c.APIKey)
@@ -87,29 +87,32 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return resp, nil
+		return resp.StatusCode, nil
 	}
 
 	if resp.StatusCode >= 400 {
-		return resp, c.handleError(resp)
+		return resp.StatusCode, c.handleError(resp)
 	}
 
 	if v != nil {
 		if err := c.decodeResponse(resp, v); err != nil {
-			return resp, err
+			return resp.StatusCode, err
 		}
 	}
 
-	return resp, nil
+	return resp.StatusCode, nil
 }
 
 func (c *Client) handleError(resp *http.Response) error {
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read error body: %w", err)
+	}
 	resp.Body = io.NopCloser(bytes.NewBuffer(body))
 
 	var apiResp struct {
@@ -172,13 +175,13 @@ func (c *Client) CreateVPC(ctx context.Context, name, cidr string) (*VPC, error)
 
 func (c *Client) GetVPC(ctx context.Context, id string) (*VPC, error) {
 	var vpc VPC
-	resp, err := c.do(ctx, "GET", fmt.Sprintf("/vpcs/%s", id), nil, &vpc)
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/vpcs/%s", id), nil, &vpc)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+	if status == http.StatusNotFound {
+		return nil, nil //nolint:nilnil
 	}
 
 	return &vpc, nil
@@ -220,13 +223,13 @@ func (c *Client) CreateInstance(ctx context.Context, reqBody LaunchInstanceReque
 
 func (c *Client) GetInstance(ctx context.Context, id string) (*Instance, error) {
 	var instance Instance
-	resp, err := c.do(ctx, "GET", fmt.Sprintf("/instances/%s", id), nil, &instance)
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/instances/%s", id), nil, &instance)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+	if status == http.StatusNotFound {
+		return nil, nil //nolint:nilnil
 	}
 
 	return &instance, nil
@@ -262,13 +265,13 @@ func (c *Client) CreateVolume(ctx context.Context, name string, sizeGB int) (*Vo
 
 func (c *Client) GetVolume(ctx context.Context, id string) (*Volume, error) {
 	var vol Volume
-	resp, err := c.do(ctx, "GET", fmt.Sprintf("/volumes/%s", id), nil, &vol)
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/volumes/%s", id), nil, &vol)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+	if status == http.StatusNotFound {
+		return nil, nil //nolint:nilnil
 	}
 
 	return &vol, nil
@@ -318,13 +321,13 @@ func (c *Client) CreateSecurityGroup(ctx context.Context, vpcID, name, descripti
 
 func (c *Client) GetSecurityGroup(ctx context.Context, id string) (*SecurityGroup, error) {
 	var sg SecurityGroup
-	resp, err := c.do(ctx, "GET", fmt.Sprintf("/security-groups/%s", id), nil, &sg)
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/security-groups/%s", id), nil, &sg)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+	if status == http.StatusNotFound {
+		return nil, nil //nolint:nilnil
 	}
 
 	return &sg, nil
@@ -387,17 +390,20 @@ func (c *Client) CreateLoadBalancer(ctx context.Context, name, vpcID string, por
 
 func (c *Client) GetLoadBalancer(ctx context.Context, id string) (*LoadBalancer, error) {
 	var lb LoadBalancer
-	resp, err := c.do(ctx, "GET", fmt.Sprintf("/lb/%s", id), nil, &lb)
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/lb/%s", id), nil, &lb)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+	if status == http.StatusNotFound {
+		return nil, nil //nolint:nilnil
 	}
 
 	// Also fetch targets
-	targets, _ := c.ListLBTargets(ctx, id)
+	targets, err := c.ListLBTargets(ctx, id)
+	if err != nil {
+		return nil, err
+	}
 	lb.Targets = targets
 
 	return &lb, nil
@@ -453,13 +459,13 @@ func (c *Client) CreateSecret(ctx context.Context, name, value, description stri
 
 func (c *Client) GetSecret(ctx context.Context, id string) (*Secret, error) {
 	var secret Secret
-	resp, err := c.do(ctx, "GET", fmt.Sprintf("/secrets/%s", id), nil, &secret)
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/secrets/%s", id), nil, &secret)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+	if status == http.StatusNotFound {
+		return nil, nil //nolint:nilnil
 	}
 
 	return &secret, nil
@@ -532,13 +538,13 @@ func (c *Client) CreateScalingGroup(ctx context.Context, params map[string]inter
 
 func (c *Client) GetScalingGroup(ctx context.Context, id string) (*ScalingGroup, error) {
 	var group ScalingGroup
-	resp, err := c.do(ctx, "GET", fmt.Sprintf("/autoscaling/groups/%s", id), nil, &group)
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/autoscaling/groups/%s", id), nil, &group)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+	if status == http.StatusNotFound {
+		return nil, nil //nolint:nilnil
 	}
 
 	return &group, nil
@@ -603,13 +609,13 @@ func (c *Client) CreateSubnet(ctx context.Context, vpcID, name, cidr, az string)
 
 func (c *Client) GetSubnet(ctx context.Context, id string) (*Subnet, error) {
 	var subnet Subnet
-	resp, err := c.do(ctx, "GET", fmt.Sprintf("/subnets/%s", id), nil, &subnet)
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/subnets/%s", id), nil, &subnet)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+	if status == http.StatusNotFound {
+		return nil, nil //nolint:nilnil
 	}
 
 	return &subnet, nil
@@ -654,13 +660,13 @@ func (c *Client) CreateSnapshot(ctx context.Context, volumeID, description strin
 
 func (c *Client) GetSnapshot(ctx context.Context, id string) (*Snapshot, error) {
 	var snapshot Snapshot
-	resp, err := c.do(ctx, "GET", fmt.Sprintf("/snapshots/%s", id), nil, &snapshot)
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/snapshots/%s", id), nil, &snapshot)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+	if status == http.StatusNotFound {
+		return nil, nil //nolint:nilnil
 	}
 
 	return &snapshot, nil
@@ -711,13 +717,13 @@ func (c *Client) CreateDatabase(ctx context.Context, name, engine, version, vpcI
 
 func (c *Client) GetDatabase(ctx context.Context, id string) (*Database, error) {
 	var database Database
-	resp, err := c.do(ctx, "GET", fmt.Sprintf("/databases/%s", id), nil, &database)
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/databases/%s", id), nil, &database)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
+	if status == http.StatusNotFound {
+		return nil, nil //nolint:nilnil
 	}
 
 	return &database, nil
