@@ -206,10 +206,6 @@ func (r *LoadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 		case <-ticker.C:
 			lb, err := r.client.GetLoadBalancer(ctx, data.ID.ValueString())
 			if err != nil {
-				// Handle backend bug where LB_NOT_FOUND returns 500
-				if apiErr, ok := err.(*client.APIError); ok && apiErr.Code == "LB_NOT_FOUND" {
-					return
-				}
 				resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Error checking load balancer status: %s", err))
 				return
 			}

@@ -9,3 +9,12 @@ import (
 var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServer, error){
 	"thecloud": providerserver.NewProtocol6WithError(provider.New("test")()),
 }
+
+func providerConfig() string {
+	return `
+provider "thecloud" {
+  endpoint = "http://localhost:8080"
+  api_key  = "test-key"
+}
+`
+}
