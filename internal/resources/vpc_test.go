@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/poyrazk/terraform-provider-thecloud/internal/provider"
 )
+
+const vpcResourceName = "thecloud_vpc.test"
 
 func TestAccVpcResource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: provider.TestAccProtoV6ProviderFactories,
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
@@ -20,15 +21,15 @@ resource "thecloud_vpc" "test" {
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("thecloud_vpc.test", "name", "test-vpc"),
-					resource.TestCheckResourceAttr("thecloud_vpc.test", "cidr_block", "10.0.0.0/16"),
-					resource.TestCheckResourceAttrSet("thecloud_vpc.test", "id"),
-					resource.TestCheckResourceAttr("thecloud_vpc.test", "status", "available"),
+					resource.TestCheckResourceAttr(vpcResourceName, "name", "test-vpc"),
+					resource.TestCheckResourceAttr(vpcResourceName, "cidr_block", "10.0.0.0/16"),
+					resource.TestCheckResourceAttrSet(vpcResourceName, "id"),
+					resource.TestCheckResourceAttr(vpcResourceName, "status", "active"),
 				),
 			},
 			// ImportState testing
 			{
-				ResourceName:      "thecloud_vpc.test",
+				ResourceName:      vpcResourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
 			},

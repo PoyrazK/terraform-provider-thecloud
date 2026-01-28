@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"time"
+
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -187,6 +189,34 @@ func (r *LoadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete load balancer, got error: %s", err))
 		return
+	}
+
+	// Wait for LB to be fully deleted (backend async cleanup)
+	timeout := time.After(2 * time.Minute)
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timeout:
+			resp.Diagnostics.AddError("Delete Timeout", "Timed out waiting for load balancer deletion")
+			return
+		case <-ticker.C:
+			lb, err := r.client.GetLoadBalancer(ctx, data.ID.ValueString())
+			if err != nil {
+				// Handle backend bug where LB_NOT_FOUND returns 500
+				if apiErr, ok := err.(*client.APIError); ok && apiErr.Code == "LB_NOT_FOUND" {
+					return
+				}
+				resp.Diagnostics.AddError("Delete Error", fmt.Sprintf("Error checking load balancer status: %s", err))
+				return
+			}
+			if lb == nil {
+				return // Successfully deleted
+			}
+		}
 	}
 }
 
