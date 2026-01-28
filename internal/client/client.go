@@ -194,3 +194,76 @@ func (c *Client) DeleteInstance(id string) error {
 
 	return nil
 }
+
+// Volume represents the API response for a Volume
+type Volume struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	SizeGB int    `json:"size_gb"`
+	Status string `json:"status"`
+}
+
+func (c *Client) CreateVolume(name string, sizeGB int) (*Volume, error) {
+	payload := map[string]interface{}{
+		"name":    name,
+		"size_gb": sizeGB,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", c.BuildURL("/volumes"), bytes.NewBuffer(body))
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var vol Volume
+	if err := json.NewDecoder(resp.Body).Decode(&vol); err != nil {
+		return nil, err
+	}
+
+	return &vol, nil
+}
+
+func (c *Client) GetVolume(id string) (*Volume, error) {
+	req, _ := http.NewRequest("GET", c.BuildURL(fmt.Sprintf("/volumes/%s", id)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil // Not found
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var vol Volume
+	if err := json.NewDecoder(resp.Body).Decode(&vol); err != nil {
+		return nil, err
+	}
+
+	return &vol, nil
+}
+
+func (c *Client) DeleteVolume(id string) error {
+	req, _ := http.NewRequest("DELETE", c.BuildURL(fmt.Sprintf("/volumes/%s", id)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	return nil
+}

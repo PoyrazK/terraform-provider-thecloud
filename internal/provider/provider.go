@@ -94,6 +94,7 @@ func (p *TheCloudProvider) Resources(ctx context.Context) []func() resource.Reso
 	return []func() resource.Resource{
 		resources.NewVpcResource,
 		resources.NewInstanceResource,
+		resources.NewVolumeResource,
 	}
 }
 
