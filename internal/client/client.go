@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 const (
@@ -40,12 +42,16 @@ type Client struct {
 
 // NewClient creates a new API client for The Cloud
 func NewClient(endpoint, apiKey string) *Client {
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 5
+	retryClient.RetryWaitMin = 1 * time.Second
+	retryClient.RetryWaitMax = 30 * time.Second
+	retryClient.Logger = nil
+
 	return &Client{
-		Endpoint: endpoint,
-		APIKey:   apiKey,
-		HTTPClient: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		Endpoint:   endpoint,
+		APIKey:     apiKey,
+		HTTPClient: retryClient.StandardClient(),
 	}
 }
 
@@ -103,9 +109,21 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 }
 
 func (c *Client) handleError(resp *http.Response) error {
-	var apiResp APIResponse
-	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err == nil && apiResp.Error != nil {
-		return apiResp.Error
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body = io.NopCloser(bytes.NewBuffer(body))
+
+	var apiResp struct {
+		Error interface{} `json:"error"`
+	}
+	if err := json.Unmarshal(body, &apiResp); err == nil && apiResp.Error != nil {
+		switch v := apiResp.Error.(type) {
+		case string:
+			return fmt.Errorf("[%d] %s", resp.StatusCode, v)
+		case map[string]interface{}:
+			if msg, ok := v["message"].(string); ok {
+				return fmt.Errorf("[%d] %s", resp.StatusCode, msg)
+			}
+		}
 	}
 	return fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
 }
@@ -272,8 +290,8 @@ type SecurityGroup struct {
 
 // SecurityRule represents a rule within a Security Group
 type SecurityRule struct {
-	ID        string `json:"id"`
-	GroupID   string `json:"group_id"`
+	ID        string `json:"id,omitempty"`
+	GroupID   string `json:"group_id,omitempty"`
 	Direction string `json:"direction"`
 	Protocol  string `json:"protocol"`
 	PortMin   int    `json:"port_min,omitempty"`
@@ -556,4 +574,165 @@ func (c *Client) ListVolumes(ctx context.Context) ([]Volume, error) {
 		return nil, err
 	}
 	return volumes, nil
+}
+
+// Subnet represents the API response for a Subnet
+type Subnet struct {
+	ID               string `json:"id"`
+	VPCID            string `json:"vpc_id"`
+	Name             string `json:"name"`
+	CIDRBlock        string `json:"cidr_block"`
+	AvailabilityZone string `json:"availability_zone"`
+}
+
+func (c *Client) CreateSubnet(ctx context.Context, vpcID, name, cidr, az string) (*Subnet, error) {
+	payload := map[string]string{
+		"name":              name,
+		"cidr_block":        cidr,
+		"availability_zone": az,
+	}
+
+	var subnet Subnet
+	_, err := c.do(ctx, "POST", fmt.Sprintf("/vpcs/%s/subnets", vpcID), payload, &subnet)
+	if err != nil {
+		return nil, err
+	}
+
+	return &subnet, nil
+}
+
+func (c *Client) GetSubnet(ctx context.Context, id string) (*Subnet, error) {
+	var subnet Subnet
+	resp, err := c.do(ctx, "GET", fmt.Sprintf("/subnets/%s", id), nil, &subnet)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	return &subnet, nil
+}
+
+func (c *Client) ListSubnets(ctx context.Context, vpcID string) ([]Subnet, error) {
+	var subnets []Subnet
+	_, err := c.do(ctx, "GET", fmt.Sprintf("/vpcs/%s/subnets", vpcID), nil, &subnets)
+	if err != nil {
+		return nil, err
+	}
+	return subnets, nil
+}
+
+func (c *Client) DeleteSubnet(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/subnets/%s", id), nil, nil)
+	return err
+}
+
+// Snapshot represents the API response for a Snapshot
+type Snapshot struct {
+	ID          string `json:"id"`
+	VolumeID    string `json:"volume_id"`
+	Description string `json:"description"`
+	Status      string `json:"status"`
+}
+
+func (c *Client) CreateSnapshot(ctx context.Context, volumeID, description string) (*Snapshot, error) {
+	payload := map[string]string{
+		"volume_id":   volumeID,
+		"description": description,
+	}
+
+	var snapshot Snapshot
+	_, err := c.do(ctx, "POST", "/snapshots", payload, &snapshot)
+	if err != nil {
+		return nil, err
+	}
+
+	return &snapshot, nil
+}
+
+func (c *Client) GetSnapshot(ctx context.Context, id string) (*Snapshot, error) {
+	var snapshot Snapshot
+	resp, err := c.do(ctx, "GET", fmt.Sprintf("/snapshots/%s", id), nil, &snapshot)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	return &snapshot, nil
+}
+
+func (c *Client) ListSnapshots(ctx context.Context) ([]Snapshot, error) {
+	var snapshots []Snapshot
+	_, err := c.do(ctx, "GET", "/snapshots", nil, &snapshots)
+	if err != nil {
+		return nil, err
+	}
+	return snapshots, nil
+}
+
+func (c *Client) DeleteSnapshot(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/snapshots/%s", id), nil, nil)
+	return err
+}
+
+// Database represents the API response for a Database
+type Database struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Engine  string `json:"engine"`
+	Version string `json:"version"`
+	VpcID   string `json:"vpc_id,omitempty"`
+	Status  string `json:"status"`
+}
+
+func (c *Client) CreateDatabase(ctx context.Context, name, engine, version, vpcID string) (*Database, error) {
+	payload := map[string]interface{}{
+		"name":    name,
+		"engine":  engine,
+		"version": version,
+	}
+	if vpcID != "" {
+		payload["vpc_id"] = vpcID
+	}
+
+	var database Database
+	_, err := c.do(ctx, "POST", "/databases", payload, &database)
+	if err != nil {
+		return nil, err
+	}
+
+	return &database, nil
+}
+
+func (c *Client) GetDatabase(ctx context.Context, id string) (*Database, error) {
+	var database Database
+	resp, err := c.do(ctx, "GET", fmt.Sprintf("/databases/%s", id), nil, &database)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	return &database, nil
+}
+
+func (c *Client) ListDatabases(ctx context.Context) ([]Database, error) {
+	var databases []Database
+	_, err := c.do(ctx, "GET", "/databases", nil, &databases)
+	if err != nil {
+		return nil, err
+	}
+	return databases, nil
+}
+
+func (c *Client) DeleteDatabase(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/databases/%s", id), nil, nil)
+	return err
 }
