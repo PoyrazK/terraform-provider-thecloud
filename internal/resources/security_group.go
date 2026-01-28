@@ -98,7 +98,7 @@ func (r *SecurityGroupResource) Create(ctx context.Context, req resource.CreateR
 		return
 	}
 
-	sg, err := r.client.CreateSecurityGroup(data.VpcID.ValueString(), data.Name.ValueString(), data.Description.ValueString())
+	sg, err := r.client.CreateSecurityGroup(ctx, data.VpcID.ValueString(), data.Name.ValueString(), data.Description.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to create security group, got error: %s", err))
 		return
@@ -123,7 +123,7 @@ func (r *SecurityGroupResource) Read(ctx context.Context, req resource.ReadReque
 		return
 	}
 
-	sg, err := r.client.GetSecurityGroup(data.ID.ValueString())
+	sg, err := r.client.GetSecurityGroup(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read security group, got error: %s", err))
 		return
@@ -155,7 +155,7 @@ func (r *SecurityGroupResource) Delete(ctx context.Context, req resource.DeleteR
 		return
 	}
 
-	err := r.client.DeleteSecurityGroup(data.ID.ValueString())
+	err := r.client.DeleteSecurityGroup(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete security group, got error: %s", err))
 		return

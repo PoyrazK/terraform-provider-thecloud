@@ -118,7 +118,7 @@ func (r *LoadBalancerTargetResource) Create(ctx context.Context, req resource.Cr
 		Weight:     int(data.Weight.ValueInt64()),
 	}
 
-	err := r.client.AddLBTarget(data.LoadBalancerID.ValueString(), target)
+	err := r.client.AddLBTarget(ctx, data.LoadBalancerID.ValueString(), target)
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to add target to load balancer, got error: %s", err))
 		return
@@ -140,7 +140,7 @@ func (r *LoadBalancerTargetResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	targets, err := r.client.ListLBTargets(data.LoadBalancerID.ValueString())
+	targets, err := r.client.ListLBTargets(ctx, data.LoadBalancerID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read load balancer targets, got error: %s", err))
 		return
@@ -177,7 +177,7 @@ func (r *LoadBalancerTargetResource) Delete(ctx context.Context, req resource.De
 		return
 	}
 
-	err := r.client.RemoveLBTarget(data.LoadBalancerID.ValueString(), data.InstanceID.ValueString())
+	err := r.client.RemoveLBTarget(ctx, data.LoadBalancerID.ValueString(), data.InstanceID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to remove target from load balancer, got error: %s", err))
 		return

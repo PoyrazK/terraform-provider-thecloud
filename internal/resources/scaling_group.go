@@ -143,7 +143,7 @@ func (r *ScalingGroupResource) Create(ctx context.Context, req resource.CreateRe
 		params["load_balancer_id"] = data.LoadBalancerID.ValueString()
 	}
 
-	group, err := r.client.CreateScalingGroup(params)
+	group, err := r.client.CreateScalingGroup(ctx, params)
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to create scaling group, got error: %s", err))
 		return
@@ -166,7 +166,7 @@ func (r *ScalingGroupResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	group, err := r.client.GetScalingGroup(data.ID.ValueString())
+	group, err := r.client.GetScalingGroup(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read scaling group, got error: %s", err))
 		return
@@ -204,7 +204,7 @@ func (r *ScalingGroupResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	err := r.client.DeleteScalingGroup(data.ID.ValueString())
+	err := r.client.DeleteScalingGroup(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete scaling group, got error: %s", err))
 		return

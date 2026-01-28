@@ -89,7 +89,7 @@ func (d *VpcDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 		return
 	}
 
-	foundVpc, err := d.lookupVpc(data)
+	foundVpc, err := d.lookupVpc(ctx, data)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read VPC, got error: %s", err))
 		return
@@ -108,20 +108,20 @@ func (d *VpcDataSource) Read(ctx context.Context, req datasource.ReadRequest, re
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (d *VpcDataSource) lookupVpc(data VpcDataSourceModel) (*client.VPC, error) {
+func (d *VpcDataSource) lookupVpc(ctx context.Context, data VpcDataSourceModel) (*client.VPC, error) {
 	if !data.ID.IsNull() {
-		return d.client.GetVPC(data.ID.ValueString())
+		return d.client.GetVPC(ctx, data.ID.ValueString())
 	}
 
 	if !data.Name.IsNull() {
-		return d.lookupVpcByName(data.Name.ValueString())
+		return d.lookupVpcByName(ctx, data.Name.ValueString())
 	}
 
 	return nil, fmt.Errorf("either 'id' or 'name' must be specified")
 }
 
-func (d *VpcDataSource) lookupVpcByName(name string) (*client.VPC, error) {
-	vpcs, err := d.client.ListVPCs()
+func (d *VpcDataSource) lookupVpcByName(ctx context.Context, name string) (*client.VPC, error) {
+	vpcs, err := d.client.ListVPCs(ctx)
 	if err != nil {
 		return nil, err
 	}

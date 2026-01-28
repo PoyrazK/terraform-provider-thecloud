@@ -120,7 +120,7 @@ func (r *InstanceResource) Create(ctx context.Context, req resource.CreateReques
 		VpcID: data.VpcID.ValueString(),
 	}
 
-	instance, err := r.client.CreateInstance(createReq)
+	instance, err := r.client.CreateInstance(ctx, createReq)
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to create instance, got error: %s", err))
 		return
@@ -148,7 +148,7 @@ func (r *InstanceResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	instance, err := r.client.GetInstance(data.ID.ValueString())
+	instance, err := r.client.GetInstance(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read instance, got error: %s", err))
 		return
@@ -184,7 +184,7 @@ func (r *InstanceResource) Delete(ctx context.Context, req resource.DeleteReques
 		return
 	}
 
-	err := r.client.DeleteInstance(data.ID.ValueString())
+	err := r.client.DeleteInstance(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete instance, got error: %s", err))
 		return

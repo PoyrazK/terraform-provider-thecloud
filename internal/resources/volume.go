@@ -99,7 +99,7 @@ func (r *VolumeResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	vol, err := r.client.CreateVolume(data.Name.ValueString(), int(data.SizeGB.ValueInt64()))
+	vol, err := r.client.CreateVolume(ctx, data.Name.ValueString(), int(data.SizeGB.ValueInt64()))
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to create volume, got error: %s", err))
 		return
@@ -124,7 +124,7 @@ func (r *VolumeResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	vol, err := r.client.GetVolume(data.ID.ValueString())
+	vol, err := r.client.GetVolume(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read volume, got error: %s", err))
 		return
@@ -156,7 +156,7 @@ func (r *VolumeResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.client.DeleteVolume(data.ID.ValueString())
+	err := r.client.DeleteVolume(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete volume, got error: %s", err))
 		return

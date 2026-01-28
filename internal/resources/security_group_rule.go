@@ -148,7 +148,7 @@ func (r *SecurityGroupRuleResource) Create(ctx context.Context, req resource.Cre
 		Priority:  int(data.Priority.ValueInt64()),
 	}
 
-	rule, err := r.client.AddSecurityRule(data.SecurityGroupID.ValueString(), ruleReq)
+	rule, err := r.client.AddSecurityRule(ctx, data.SecurityGroupID.ValueString(), ruleReq)
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to create security group rule, got error: %s", err))
 		return
@@ -173,7 +173,7 @@ func (r *SecurityGroupRuleResource) Read(ctx context.Context, req resource.ReadR
 
 	// The API doesn't have a direct "GetRule" by ID, it returns rules within GetGroup.
 	// We need to fetch the group and find our rule.
-	sg, err := r.client.GetSecurityGroup(data.SecurityGroupID.ValueString())
+	sg, err := r.client.GetSecurityGroup(ctx, data.SecurityGroupID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read security group for rule, got error: %s", err))
 		return
@@ -219,7 +219,7 @@ func (r *SecurityGroupRuleResource) Delete(ctx context.Context, req resource.Del
 		return
 	}
 
-	err := r.client.RemoveSecurityRule(data.ID.ValueString())
+	err := r.client.RemoveSecurityRule(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete security group rule, got error: %s", err))
 		return

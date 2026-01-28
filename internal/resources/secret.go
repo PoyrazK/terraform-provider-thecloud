@@ -105,7 +105,7 @@ func (r *SecretResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	secret, err := r.client.CreateSecret(data.Name.ValueString(), data.Value.ValueString(), data.Description.ValueString())
+	secret, err := r.client.CreateSecret(ctx, data.Name.ValueString(), data.Value.ValueString(), data.Description.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to create secret, got error: %s", err))
 		return
@@ -127,7 +127,7 @@ func (r *SecretResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	secret, err := r.client.GetSecret(data.ID.ValueString())
+	secret, err := r.client.GetSecret(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read secret, got error: %s", err))
 		return
@@ -159,7 +159,7 @@ func (r *SecretResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.client.DeleteSecret(data.ID.ValueString())
+	err := r.client.DeleteSecret(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete secret, got error: %s", err))
 		return

@@ -98,7 +98,7 @@ func (d *InstancesDataSource) Configure(ctx context.Context, req datasource.Conf
 func (d *InstancesDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data InstancesDataSourceModel
 
-	instances, err := d.client.ListInstances()
+	instances, err := d.client.ListInstances(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to list instances, got error: %s", err))
 		return

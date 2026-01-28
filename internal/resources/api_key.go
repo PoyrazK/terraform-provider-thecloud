@@ -99,7 +99,7 @@ func (r *ApiKeyResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	key, err := r.client.CreateAPIKey(data.Name.ValueString())
+	key, err := r.client.CreateAPIKey(ctx, data.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to create API key, got error: %s", err))
 		return
@@ -123,7 +123,7 @@ func (r *ApiKeyResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	keys, err := r.client.ListAPIKeys()
+	keys, err := r.client.ListAPIKeys(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to list API keys, got error: %s", err))
 		return
@@ -163,7 +163,7 @@ func (r *ApiKeyResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.client.RevokeAPIKey(data.ID.ValueString())
+	err := r.client.RevokeAPIKey(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to revoke API key, got error: %s", err))
 		return

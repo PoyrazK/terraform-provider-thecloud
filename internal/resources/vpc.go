@@ -99,7 +99,7 @@ func (r *VpcResource) Create(ctx context.Context, req resource.CreateRequest, re
 		return
 	}
 
-	vpc, err := r.client.CreateVPC(data.Name.ValueString(), data.CIDRBlock.ValueString())
+	vpc, err := r.client.CreateVPC(ctx, data.Name.ValueString(), data.CIDRBlock.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to create VPC, got error: %s", err))
 		return
@@ -124,7 +124,7 @@ func (r *VpcResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 		return
 	}
 
-	vpc, err := r.client.GetVPC(data.ID.ValueString())
+	vpc, err := r.client.GetVPC(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read VPC, got error: %s", err))
 		return
@@ -158,7 +158,7 @@ func (r *VpcResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 		return
 	}
 
-	err := r.client.DeleteVPC(data.ID.ValueString())
+	err := r.client.DeleteVPC(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete VPC, got error: %s", err))
 		return

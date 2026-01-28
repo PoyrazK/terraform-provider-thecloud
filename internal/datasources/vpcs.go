@@ -86,7 +86,7 @@ func (d *VpcsDataSource) Configure(ctx context.Context, req datasource.Configure
 func (d *VpcsDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data VpcsDataSourceModel
 
-	vpcs, err := d.client.ListVPCs()
+	vpcs, err := d.client.ListVPCs(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to list VPCs, got error: %s", err))
 		return

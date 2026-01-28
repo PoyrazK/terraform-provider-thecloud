@@ -117,6 +117,7 @@ func (r *LoadBalancerResource) Create(ctx context.Context, req resource.CreateRe
 	}
 
 	lb, err := r.client.CreateLoadBalancer(
+		ctx,
 		data.Name.ValueString(),
 		data.VpcID.ValueString(),
 		int(data.Port.ValueInt64()),
@@ -148,7 +149,7 @@ func (r *LoadBalancerResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	lb, err := r.client.GetLoadBalancer(data.ID.ValueString())
+	lb, err := r.client.GetLoadBalancer(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read load balancer, got error: %s", err))
 		return
@@ -182,7 +183,7 @@ func (r *LoadBalancerResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
-	err := r.client.DeleteLoadBalancer(data.ID.ValueString())
+	err := r.client.DeleteLoadBalancer(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete load balancer, got error: %s", err))
 		return

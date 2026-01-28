@@ -102,7 +102,7 @@ func (d *InstanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	instance, err := d.client.GetInstance(data.ID.ValueString())
+	instance, err := d.client.GetInstance(ctx, data.ID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read instance, got error: %s", err))
 		return
