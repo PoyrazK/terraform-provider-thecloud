@@ -532,3 +532,77 @@ func (c *Client) ListLBTargets(lbID string) ([]LBTarget, error) {
 
 	return targets, nil
 }
+
+// Secret represents the API response for a Secret
+type Secret struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Value       string `json:"value,omitempty"`
+	Description string `json:"description"`
+}
+
+func (c *Client) CreateSecret(name, value, description string) (*Secret, error) {
+	payload := map[string]string{
+		"name":        name,
+		"value":       value,
+		"description": description,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest("POST", c.BuildURL("/secrets"), bytes.NewBuffer(body))
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var secret Secret
+	if err := json.NewDecoder(resp.Body).Decode(&secret); err != nil {
+		return nil, err
+	}
+
+	return &secret, nil
+}
+
+func (c *Client) GetSecret(id string) (*Secret, error) {
+	req, _ := http.NewRequest("GET", c.BuildURL(fmt.Sprintf("/secrets/%s", id)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var secret Secret
+	if err := json.NewDecoder(resp.Body).Decode(&secret); err != nil {
+		return nil, err
+	}
+
+	return &secret, nil
+}
+
+func (c *Client) DeleteSecret(id string) error {
+	req, _ := http.NewRequest("DELETE", c.BuildURL(fmt.Sprintf("/secrets/%s", id)), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	return nil
+}

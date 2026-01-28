@@ -99,6 +99,7 @@ func (p *TheCloudProvider) Resources(ctx context.Context) []func() resource.Reso
 		resources.NewSecurityGroupRuleResource,
 		resources.NewLoadBalancerResource,
 		resources.NewLoadBalancerTargetResource,
+		resources.NewSecretResource,
 	}
 }
 
