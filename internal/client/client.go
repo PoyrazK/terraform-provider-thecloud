@@ -55,14 +55,6 @@ func NewClient(endpoint, apiKey string) *Client {
 	}
 }
 
-// DoRequest performs an HTTP request with the necessary headers
-func (c *Client) DoRequest(req *http.Request) (*http.Response, error) {
-	req.Header.Set("X-API-Key", c.APIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	return c.HTTPClient.Do(req)
-}
-
 func (c *Client) BuildURL(path string) string {
 	return fmt.Sprintf("%s%s", c.Endpoint, path)
 }
@@ -89,7 +81,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}, 
 	if err != nil {
 		return 0, err
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return resp.StatusCode, nil
@@ -181,7 +173,7 @@ func (c *Client) GetVPC(ctx context.Context, id string) (*VPC, error) {
 	}
 
 	if status == http.StatusNotFound {
-		return nil, nil //nolint:nilnil
+		return nil, nil // nolint:nilnil
 	}
 
 	return &vpc, nil
@@ -229,7 +221,7 @@ func (c *Client) GetInstance(ctx context.Context, id string) (*Instance, error) 
 	}
 
 	if status == http.StatusNotFound {
-		return nil, nil //nolint:nilnil
+		return nil, nil // nolint:nilnil
 	}
 
 	return &instance, nil
@@ -271,7 +263,7 @@ func (c *Client) GetVolume(ctx context.Context, id string) (*Volume, error) {
 	}
 
 	if status == http.StatusNotFound {
-		return nil, nil //nolint:nilnil
+		return nil, nil // nolint:nilnil
 	}
 
 	return &vol, nil
@@ -327,7 +319,7 @@ func (c *Client) GetSecurityGroup(ctx context.Context, id string) (*SecurityGrou
 	}
 
 	if status == http.StatusNotFound {
-		return nil, nil //nolint:nilnil
+		return nil, nil // nolint:nilnil
 	}
 
 	return &sg, nil
@@ -396,7 +388,7 @@ func (c *Client) GetLoadBalancer(ctx context.Context, id string) (*LoadBalancer,
 	}
 
 	if status == http.StatusNotFound {
-		return nil, nil //nolint:nilnil
+		return nil, nil // nolint:nilnil
 	}
 
 	// Also fetch targets
@@ -465,7 +457,7 @@ func (c *Client) GetSecret(ctx context.Context, id string) (*Secret, error) {
 	}
 
 	if status == http.StatusNotFound {
-		return nil, nil //nolint:nilnil
+		return nil, nil // nolint:nilnil
 	}
 
 	return &secret, nil
@@ -544,7 +536,7 @@ func (c *Client) GetScalingGroup(ctx context.Context, id string) (*ScalingGroup,
 	}
 
 	if status == http.StatusNotFound {
-		return nil, nil //nolint:nilnil
+		return nil, nil // nolint:nilnil
 	}
 
 	return &group, nil
@@ -615,7 +607,7 @@ func (c *Client) GetSubnet(ctx context.Context, id string) (*Subnet, error) {
 	}
 
 	if status == http.StatusNotFound {
-		return nil, nil //nolint:nilnil
+		return nil, nil // nolint:nilnil
 	}
 
 	return &subnet, nil
@@ -666,7 +658,7 @@ func (c *Client) GetSnapshot(ctx context.Context, id string) (*Snapshot, error) 
 	}
 
 	if status == http.StatusNotFound {
-		return nil, nil //nolint:nilnil
+		return nil, nil // nolint:nilnil
 	}
 
 	return &snapshot, nil
@@ -723,7 +715,7 @@ func (c *Client) GetDatabase(ctx context.Context, id string) (*Database, error) 
 	}
 
 	if status == http.StatusNotFound {
-		return nil, nil //nolint:nilnil
+		return nil, nil // nolint:nilnil
 	}
 
 	return &database, nil
