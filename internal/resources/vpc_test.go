@@ -15,6 +15,7 @@ func TestAccVpcResource(t *testing.T) {
 	vpcName := fmt.Sprintf("test-vpc-%s", rName)
 
 	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
