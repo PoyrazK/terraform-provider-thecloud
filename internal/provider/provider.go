@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/poyrazk/terraform-provider-thecloud/internal/client"
+	"github.com/poyrazk/terraform-provider-thecloud/internal/datasources"
 	"github.com/poyrazk/terraform-provider-thecloud/internal/resources"
 )
 
@@ -107,9 +108,8 @@ func (p *TheCloudProvider) Resources(ctx context.Context) []func() resource.Reso
 
 func (p *TheCloudProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		// To be added:
-		// NewVpcDataSource,
-		// etc.
+		datasources.NewVpcDataSource,
+		datasources.NewVpcsDataSource,
 	}
 }
 

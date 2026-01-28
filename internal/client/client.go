@@ -749,3 +749,63 @@ func (c *Client) DeleteScalingGroup(id string) error {
 
 	return nil
 }
+
+func (c *Client) ListVPCs() ([]VPC, error) {
+	req, _ := http.NewRequest("GET", c.BuildURL("/vpcs"), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var vpcs []VPC
+	if err := json.NewDecoder(resp.Body).Decode(&vpcs); err != nil {
+		return nil, err
+	}
+
+	return vpcs, nil
+}
+
+func (c *Client) ListInstances() ([]Instance, error) {
+	req, _ := http.NewRequest("GET", c.BuildURL("/instances"), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var instances []Instance
+	if err := json.NewDecoder(resp.Body).Decode(&instances); err != nil {
+		return nil, err
+	}
+
+	return instances, nil
+}
+
+func (c *Client) ListVolumes() ([]Volume, error) {
+	req, _ := http.NewRequest("GET", c.BuildURL("/volumes"), nil)
+	resp, err := c.DoRequest(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(errUnexpectedStatus, resp.StatusCode)
+	}
+
+	var volumes []Volume
+	if err := json.NewDecoder(resp.Body).Decode(&volumes); err != nil {
+		return nil, err
+	}
+
+	return volumes, nil
+}
