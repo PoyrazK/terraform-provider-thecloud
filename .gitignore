@@ -33,3 +33,4 @@ terraform-provider-thecloud
 
 # OS
 .DS_Store
+thecloud-backend/
