@@ -39,16 +39,18 @@ func (d *InstanceDataSource) Metadata(ctx context.Context, req datasource.Metada
 
 func (d *InstanceDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Instance data source allows you to look up instance details by ID.",
+		MarkdownDescription: "Instance data source allows you to look up instance details by ID or Name.",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Required:            true,
+				Optional:            true,
+				Computed:            true,
 				MarkdownDescription: "The ID of the instance to look up.",
 			},
 			"name": schema.StringAttribute{
+				Optional:            true,
 				Computed:            true,
-				MarkdownDescription: "The name of the instance.",
+				MarkdownDescription: "The name of the instance to look up.",
 			},
 			"image": schema.StringAttribute{
 				Computed:            true,
@@ -102,17 +104,29 @@ func (d *InstanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	instance, err := d.client.GetInstance(ctx, data.ID.ValueString())
+	var instance *client.Instance
+	var err error
+
+	if !data.ID.IsNull() {
+		instance, err = d.client.GetInstance(ctx, data.ID.ValueString())
+	} else if !data.Name.IsNull() {
+		instance, err = d.lookupInstanceByName(ctx, data.Name.ValueString())
+	} else {
+		resp.Diagnostics.AddError("Missing Required Attribute", "Either id or name must be specified.")
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read instance, got error: %s", err))
 		return
 	}
 
 	if instance == nil {
-		resp.Diagnostics.AddError("Instance Not Found", "No instance matching the ID was found.")
+		resp.Diagnostics.AddError("Instance Not Found", "No instance matching the criteria was found.")
 		return
 	}
 
+	data.ID = types.StringValue(instance.ID)
 	data.Name = types.StringValue(instance.Name)
 	data.Image = types.StringValue(instance.Image)
 	data.Ports = types.StringValue(instance.Ports)
@@ -121,4 +135,19 @@ func (d *InstanceDataSource) Read(ctx context.Context, req datasource.ReadReques
 	data.IPAddress = types.StringValue(instance.IPAddress)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func (d *InstanceDataSource) lookupInstanceByName(ctx context.Context, name string) (*client.Instance, error) {
+	instances, err := d.client.ListInstances(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, inst := range instances {
+		if inst.Name == name {
+			return &inst, nil
+		}
+	}
+
+	return nil, nil
 }
