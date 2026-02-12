@@ -734,3 +734,171 @@ func (c *Client) DeleteDatabase(ctx context.Context, id string) error {
 	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/databases/%s", id), nil, nil)
 	return err
 }
+
+// ElasticIP represents the API response for an Elastic IP
+type ElasticIP struct {
+	ID         string `json:"id"`
+	PublicIP   string `json:"public_ip"`
+	InstanceID string `json:"instance_id,omitempty"`
+	Status     string `json:"status"`
+}
+
+func (c *Client) AllocateElasticIP(ctx context.Context) (*ElasticIP, error) {
+	var eip ElasticIP
+	_, err := c.do(ctx, "POST", "/elastic-ips", nil, &eip)
+	if err != nil {
+		return nil, err
+	}
+	return &eip, nil
+}
+
+func (c *Client) GetElasticIP(ctx context.Context, id string) (*ElasticIP, error) {
+	var eip ElasticIP
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/elastic-ips/%s", id), nil, &eip)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	return &eip, nil
+}
+
+func (c *Client) ListElasticIPs(ctx context.Context) ([]ElasticIP, error) {
+	var eips []ElasticIP
+	_, err := c.do(ctx, "GET", "/elastic-ips", nil, &eips)
+	if err != nil {
+		return nil, err
+	}
+	return eips, nil
+}
+
+func (c *Client) ReleaseElasticIP(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/elastic-ips/%s", id), nil, nil)
+	return err
+}
+
+func (c *Client) AssociateElasticIP(ctx context.Context, id string, instanceID string) (*ElasticIP, error) {
+	payload := map[string]string{
+		"instance_id": instanceID,
+	}
+	var eip ElasticIP
+	_, err := c.do(ctx, "POST", fmt.Sprintf("/elastic-ips/%s/associate", id), payload, &eip)
+	if err != nil {
+		return nil, err
+	}
+	return &eip, nil
+}
+
+func (c *Client) DisassociateElasticIP(ctx context.Context, id string) (*ElasticIP, error) {
+	var eip ElasticIP
+	_, err := c.do(ctx, "POST", fmt.Sprintf("/elastic-ips/%s/disassociate", id), nil, &eip)
+	if err != nil {
+		return nil, err
+	}
+	return &eip, nil
+}
+
+// DNSZone represents the API response for a DNS Zone
+type DNSZone struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	VpcID       string `json:"vpc_id"`
+	Status      string `json:"status"`
+}
+
+func (c *Client) CreateDNSZone(ctx context.Context, name, description, vpcID string) (*DNSZone, error) {
+	payload := map[string]string{
+		"name":        name,
+		"description": description,
+		"vpc_id":      vpcID,
+	}
+	var zone DNSZone
+	_, err := c.do(ctx, "POST", "/dns/zones", payload, &zone)
+	if err != nil {
+		return nil, err
+	}
+	return &zone, nil
+}
+
+func (c *Client) GetDNSZone(ctx context.Context, id string) (*DNSZone, error) {
+	var zone DNSZone
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/dns/zones/%s", id), nil, &zone)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	return &zone, nil
+}
+
+func (c *Client) ListDNSZones(ctx context.Context) ([]DNSZone, error) {
+	var zones []DNSZone
+	_, err := c.do(ctx, "GET", "/dns/zones", nil, &zones)
+	if err != nil {
+		return nil, err
+	}
+	return zones, nil
+}
+
+func (c *Client) DeleteDNSZone(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/dns/zones/%s", id), nil, nil)
+	return err
+}
+
+// DNSRecord represents the API response for a DNS Record
+type DNSRecord struct {
+	ID       string `json:"id"`
+	ZoneID   string `json:"zone_id"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Content  string `json:"content"`
+	TTL      int    `json:"ttl"`
+	Priority *int   `json:"priority,omitempty"`
+}
+
+func (c *Client) CreateDNSRecord(ctx context.Context, zoneID string, record DNSRecord) (*DNSRecord, error) {
+	var res DNSRecord
+	_, err := c.do(ctx, "POST", fmt.Sprintf("/dns/zones/%s/records", zoneID), record, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) GetDNSRecord(ctx context.Context, id string) (*DNSRecord, error) {
+	var record DNSRecord
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/dns/records/%s", id), nil, &record)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	return &record, nil
+}
+
+func (c *Client) ListDNSRecords(ctx context.Context, zoneID string) ([]DNSRecord, error) {
+	var records []DNSRecord
+	_, err := c.do(ctx, "GET", fmt.Sprintf("/dns/zones/%s/records", zoneID), nil, &records)
+	if err != nil {
+		return nil, err
+	}
+	return records, nil
+}
+
+func (c *Client) UpdateDNSRecord(ctx context.Context, id string, record DNSRecord) (*DNSRecord, error) {
+	var res DNSRecord
+	_, err := c.do(ctx, "PUT", fmt.Sprintf("/dns/records/%s", id), record, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) DeleteDNSRecord(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/dns/records/%s", id), nil, nil)
+	return err
+}
