@@ -902,3 +902,75 @@ func (c *Client) DeleteDNSRecord(ctx context.Context, id string) error {
 	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/dns/records/%s", id), nil, nil)
 	return err
 }
+
+// Cluster represents the API response for a K8s Cluster
+type Cluster struct {
+	ID                 string   `json:"id"`
+	Name               string   `json:"name"`
+	VpcID              string   `json:"vpc_id"`
+	Version            string   `json:"version"`
+	WorkerCount        int      `json:"worker_count"`
+	Status             string   `json:"status"`
+	PodCIDR            string   `json:"pod_cidr"`
+	ServiceCIDR        string   `json:"service_cidr"`
+	NetworkIsolation   bool     `json:"network_isolation"`
+	HAEnabled          bool     `json:"ha_enabled"`
+	APIServerLBAddress string   `json:"api_server_lb_address,omitempty"`
+	ControlPlaneIPs    []string `json:"control_plane_ips"`
+}
+
+type CreateClusterRequest struct {
+	Name             string `json:"name"`
+	VpcID            string `json:"vpc_id"`
+	Version          string `json:"version,omitempty"`
+	Workers          int    `json:"workers,omitempty"`
+	NetworkIsolation bool   `json:"network_isolation,omitempty"`
+	HA               bool   `json:"ha,omitempty"`
+}
+
+func (c *Client) CreateCluster(ctx context.Context, req CreateClusterRequest) (*Cluster, error) {
+	var cluster Cluster
+	_, err := c.do(ctx, "POST", "/clusters", req, &cluster)
+	if err != nil {
+		return nil, err
+	}
+	return &cluster, nil
+}
+
+func (c *Client) GetCluster(ctx context.Context, id string) (*Cluster, error) {
+	var cluster Cluster
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/clusters/%s", id), nil, &cluster)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	return &cluster, nil
+}
+
+func (c *Client) ListClusters(ctx context.Context) ([]Cluster, error) {
+	var clusters []Cluster
+	_, err := c.do(ctx, "GET", "/clusters", nil, &clusters)
+	if err != nil {
+		return nil, err
+	}
+	return clusters, nil
+}
+
+func (c *Client) DeleteCluster(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/clusters/%s", id), nil, nil)
+	return err
+}
+
+func (c *Client) ScaleCluster(ctx context.Context, id string, workers int) error {
+	payload := map[string]int{"workers": workers}
+	_, err := c.do(ctx, "POST", fmt.Sprintf("/clusters/%s/scale", id), payload, nil)
+	return err
+}
+
+func (c *Client) UpgradeCluster(ctx context.Context, id string, version string) error {
+	payload := map[string]string{"version": version}
+	_, err := c.do(ctx, "POST", fmt.Sprintf("/clusters/%s/upgrade", id), payload, nil)
+	return err
+}
