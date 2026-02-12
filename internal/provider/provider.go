@@ -110,6 +110,7 @@ func (p *TheCloudProvider) Resources(ctx context.Context) []func() resource.Reso
 		resources.NewElasticIPAssociationResource,
 		resources.NewDNSZoneResource,
 		resources.NewDNSRecordResource,
+		resources.NewClusterResource,
 	}
 }
 
@@ -121,6 +122,8 @@ func (p *TheCloudProvider) DataSources(ctx context.Context) []func() datasource.
 		datasources.NewSubnetsDataSource,
 		datasources.NewInstanceDataSource,
 		datasources.NewInstancesDataSource,
+		datasources.NewClusterDataSource,
+		datasources.NewClustersDataSource,
 	}
 }
 
