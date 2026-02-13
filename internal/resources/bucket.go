@@ -118,17 +118,19 @@ func (r *BucketResource) Create(ctx context.Context, req resource.CreateRequest,
 
 	data.ID = types.StringValue(bucket.ID)
 	data.IsPublic = types.BoolValue(bucket.IsPublic)
-	data.VersioningEnabled = types.BoolValue(bucket.VersioningEnabled)
 	data.EncryptionEnabled = types.BoolValue(bucket.EncryptionEnabled)
 	data.CreatedAt = types.StringValue(bucket.CreatedAt)
 
 	// Update versioning if requested (API Create doesn't seem to set it directly)
-	if !data.VersioningEnabled.IsNull() && data.VersioningEnabled.ValueBool() != bucket.VersioningEnabled {
-		err = r.client.SetBucketVersioning(ctx, bucket.Name, data.VersioningEnabled.ValueBool())
+	if !data.VersioningEnabled.IsNull() && data.VersioningEnabled.ValueBool() {
+		err = r.client.SetBucketVersioning(ctx, bucket.Name, true)
 		if err != nil {
 			resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to set Bucket versioning, got error: %s", err))
 			return
 		}
+		data.VersioningEnabled = types.BoolValue(true)
+	} else {
+		data.VersioningEnabled = types.BoolValue(false)
 	}
 
 	tflog.Trace(ctx, "created a Bucket resource")
