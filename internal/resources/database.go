@@ -29,12 +29,15 @@ type DatabaseResource struct {
 
 // DatabaseResourceModel describes the resource data model.
 type DatabaseResourceModel struct {
-	ID      types.String `tfsdk:"id"`
-	Name    types.String `tfsdk:"name"`
-	Engine  types.String `tfsdk:"engine"`
-	Version types.String `tfsdk:"version"`
-	VpcID   types.String `tfsdk:"vpc_id"`
-	Status  types.String `tfsdk:"status"`
+	ID               types.String `tfsdk:"id"`
+	Name             types.String `tfsdk:"name"`
+	Engine           types.String `tfsdk:"engine"`
+	Version          types.String `tfsdk:"version"`
+	VpcID            types.String `tfsdk:"vpc_id"`
+	Status           types.String `tfsdk:"status"`
+	Port             types.Int64  `tfsdk:"port"`
+	Username         types.String `tfsdk:"username"`
+	ConnectionString types.String `tfsdk:"connection_string"`
 }
 
 func (r *DatabaseResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -43,7 +46,7 @@ func (r *DatabaseResource) Metadata(ctx context.Context, req resource.MetadataRe
 
 func (r *DatabaseResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Database resource allows you to manage managed database instances.",
+		MarkdownDescription: "Database resource allows you to manage managed relational database instances.",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -59,21 +62,21 @@ func (r *DatabaseResource) Schema(ctx context.Context, req resource.SchemaReques
 			},
 			"engine": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "The database engine (postgres, mysql, redis, etc).",
+				MarkdownDescription: "The database engine (postgres or mysql).",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"version": schema.StringAttribute{
 				Required:            true,
-				MarkdownDescription: "The database engine version.",
+				MarkdownDescription: "The engine version (e.g., 15 or 8.0).",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"vpc_id": schema.StringAttribute{
 				Optional:            true,
-				MarkdownDescription: "The ID of the VPC this database belongs to.",
+				MarkdownDescription: "The ID of the VPC to launch the database in.",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -81,9 +84,19 @@ func (r *DatabaseResource) Schema(ctx context.Context, req resource.SchemaReques
 			"status": schema.StringAttribute{
 				Computed:            true,
 				MarkdownDescription: "The status of the database.",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+			},
+			"port": schema.Int64Attribute{
+				Computed:            true,
+				MarkdownDescription: "The port the database is listening on.",
+			},
+			"username": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The master username for the database.",
+			},
+			"connection_string": schema.StringAttribute{
+				Computed:            true,
+				MarkdownDescription: "The connection string for the database.",
+				Sensitive:           true,
 			},
 		},
 	}
@@ -125,20 +138,15 @@ func (r *DatabaseResource) Create(ctx context.Context, req resource.CreateReques
 		data.VpcID.ValueString(),
 	)
 	if err != nil {
-		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to create database, got error: %s", err))
+		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to create Database, got error: %s", err))
 		return
 	}
 
 	data.ID = types.StringValue(db.ID)
-	data.Name = types.StringValue(db.Name)
-	data.Engine = types.StringValue(db.Engine)
-	data.Version = types.StringValue(db.Version)
-	if !data.VpcID.IsNull() || db.VpcID != "" {
-		data.VpcID = types.StringValue(db.VpcID)
-	} else {
-		data.VpcID = types.StringNull()
-	}
 	data.Status = types.StringValue(db.Status)
+	data.Port = types.Int64Value(int64(db.Port))
+	data.Username = types.StringValue(db.Username)
+	data.ConnectionString = types.StringValue(db.ConnectionString)
 
 	tflog.Trace(ctx, "created a Database resource")
 
@@ -156,7 +164,7 @@ func (r *DatabaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 	db, err := r.client.GetDatabase(ctx, data.ID.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read database, got error: %s", err))
+		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to read Database, got error: %s", err))
 		return
 	}
 
@@ -169,18 +177,17 @@ func (r *DatabaseResource) Read(ctx context.Context, req resource.ReadRequest, r
 	data.Name = types.StringValue(db.Name)
 	data.Engine = types.StringValue(db.Engine)
 	data.Version = types.StringValue(db.Version)
-	if !data.VpcID.IsNull() || db.VpcID != "" {
-		data.VpcID = types.StringValue(db.VpcID)
-	} else {
-		data.VpcID = types.StringNull()
-	}
+	data.VpcID = types.StringValue(db.VpcID)
 	data.Status = types.StringValue(db.Status)
+	data.Port = types.Int64Value(int64(db.Port))
+	data.Username = types.StringValue(db.Username)
+	data.ConnectionString = types.StringValue(db.ConnectionString)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *DatabaseResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddWarning("Update Not Supported", "Updating a database is not currently supported by the API.")
+	// API might not support updates, handled by RequiresReplace if needed
 }
 
 func (r *DatabaseResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -194,7 +201,7 @@ func (r *DatabaseResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	err := r.client.DeleteDatabase(ctx, data.ID.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete database, got error: %s", err))
+		resp.Diagnostics.AddError(errClient, fmt.Sprintf("Unable to delete Database, got error: %s", err))
 		return
 	}
 }
