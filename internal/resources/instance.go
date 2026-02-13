@@ -35,6 +35,7 @@ type InstanceResourceModel struct {
 	Image     types.String   `tfsdk:"image"`
 	Ports     types.String   `tfsdk:"ports"`
 	VpcID     types.String   `tfsdk:"vpc_id"`
+	SubnetID  types.String   `tfsdk:"subnet_id"`
 	Status    types.String   `tfsdk:"status"`
 	IPAddress types.String   `tfsdk:"ip_address"`
 	Timeouts  timeouts.Value `tfsdk:"timeouts"`
@@ -74,6 +75,10 @@ func (r *InstanceResource) Schema(ctx context.Context, req resource.SchemaReques
 			"vpc_id": schema.StringAttribute{
 				Optional:            true,
 				MarkdownDescription: "The ID of the VPC to launch the instance in.",
+			},
+			"subnet_id": schema.StringAttribute{
+				Optional:            true,
+				MarkdownDescription: "The ID of the Subnet to launch the instance in.",
 			},
 			"status": schema.StringAttribute{
 				Computed:            true,
@@ -120,10 +125,11 @@ func (r *InstanceResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	createReq := client.LaunchInstanceRequest{
-		Name:  data.Name.ValueString(),
-		Image: data.Image.ValueString(),
-		Ports: data.Ports.ValueString(),
-		VpcID: data.VpcID.ValueString(),
+		Name:     data.Name.ValueString(),
+		Image:    data.Image.ValueString(),
+		Ports:    data.Ports.ValueString(),
+		VpcID:    data.VpcID.ValueString(),
+		SubnetID: data.SubnetID.ValueString(),
 	}
 
 	instance, err := r.client.CreateInstance(ctx, createReq)
@@ -144,6 +150,11 @@ func (r *InstanceResource) Create(ctx context.Context, req resource.CreateReques
 		data.VpcID = types.StringValue(instance.VpcID)
 	} else {
 		data.VpcID = types.StringNull()
+	}
+	if !data.SubnetID.IsNull() || instance.SubnetID != "" {
+		data.SubnetID = types.StringValue(instance.SubnetID)
+	} else {
+		data.SubnetID = types.StringNull()
 	}
 	data.Status = types.StringValue(instance.Status)
 	data.IPAddress = types.StringValue(instance.IPAddress)
