@@ -1455,3 +1455,148 @@ func (c *Client) ListTenants(ctx context.Context) ([]Tenant, error) {
 	}
 	return res, nil
 }
+
+// Deployment represents the API response for a container Deployment
+type Deployment struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Image        string `json:"image"`
+	Replicas     int    `json:"replicas"`
+	CurrentCount int    `json:"current_count"`
+	Ports        string `json:"ports"`
+	Status       string `json:"status"`
+}
+
+type CreateDeploymentRequest struct {
+	Name     string `json:"name"`
+	Image    string `json:"image"`
+	Replicas int    `json:"replicas"`
+	Ports    string `json:"ports,omitempty"`
+}
+
+func (c *Client) CreateDeployment(ctx context.Context, req CreateDeploymentRequest) (*Deployment, error) {
+	var res Deployment
+	_, err := c.do(ctx, "POST", "/containers/deployments", req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) GetDeployment(ctx context.Context, id string) (*Deployment, error) {
+	var res Deployment
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/containers/deployments/%s", id), nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	return &res, nil
+}
+
+func (c *Client) ListDeployments(ctx context.Context) ([]Deployment, error) {
+	var res []Deployment
+	_, err := c.do(ctx, "GET", "/containers/deployments", nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (c *Client) DeleteDeployment(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/containers/deployments/%s", id), nil, nil)
+	return err
+}
+
+func (c *Client) ScaleDeployment(ctx context.Context, id string, replicas int) error {
+	payload := map[string]int{"replicas": replicas}
+	_, err := c.do(ctx, "POST", fmt.Sprintf("/containers/deployments/%s/scale", id), payload, nil)
+	return err
+}
+
+// Image represents the API response for a machine Image
+type Image struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	OS          string `json:"os"`
+	Version     string `json:"version"`
+	IsPublic    bool   `json:"is_public"`
+	Status      string `json:"status"`
+}
+
+type RegisterImageRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	OS          string `json:"os"`
+	Version     string `json:"version"`
+	IsPublic    bool   `json:"is_public,omitempty"`
+}
+
+func (c *Client) RegisterImage(ctx context.Context, req RegisterImageRequest) (*Image, error) {
+	var res Image
+	_, err := c.do(ctx, "POST", "/images", req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) UploadImage(ctx context.Context, id string, code []byte) error {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile("file", "image.qcow2")
+	if err != nil {
+		return err
+	}
+	_, _ = part.Write(code)
+	_ = writer.Close()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.BuildURL(fmt.Sprintf("/images/%s/upload", id)), body)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("X-API-Key", c.APIKey)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return c.handleError(resp)
+	}
+
+	return nil
+}
+
+func (c *Client) GetImage(ctx context.Context, id string) (*Image, error) {
+	var res Image
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/images/%s", id), nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	return &res, nil
+}
+
+func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
+	var res []Image
+	_, err := c.do(ctx, "GET", "/images", nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (c *Client) DeleteImage(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/images/%s", id), nil, nil)
+	return err
+}
