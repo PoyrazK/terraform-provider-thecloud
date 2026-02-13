@@ -192,6 +192,7 @@ type Instance struct {
 	Image     string `json:"image"`
 	Ports     string `json:"ports"`
 	VpcID     string `json:"vpc_id"`
+	SubnetID  string `json:"subnet_id"`
 	Status    string `json:"status"`
 	IPAddress string `json:"ip_address"`
 }
@@ -409,7 +410,10 @@ func (c *Client) DeleteLoadBalancer(ctx context.Context, id string) error {
 
 func (c *Client) AddLBTarget(ctx context.Context, lbID string, target LBTarget) error {
 	_, err := c.do(ctx, "POST", fmt.Sprintf("/lb/%s/targets", lbID), target, nil)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Client) RemoveLBTarget(ctx context.Context, lbID, instanceID string) error {
@@ -988,63 +992,6 @@ func (c *Client) UpgradeCluster(ctx context.Context, id string, version string) 
 	return err
 }
 
-// Bucket represents the API response for a Storage Bucket
-type Bucket struct {
-	ID                string `json:"id"`
-	Name              string `json:"name"`
-	IsPublic          bool   `json:"is_public"`
-	VersioningEnabled bool   `json:"versioning_enabled"`
-	EncryptionEnabled bool   `json:"encryption_enabled"`
-	CreatedAt         string `json:"created_at"`
-}
-
-func (c *Client) CreateBucket(ctx context.Context, name string, isPublic bool) (*Bucket, error) {
-	payload := map[string]interface{}{
-		"name":      name,
-		"is_public": isPublic,
-	}
-	var bucket Bucket
-	_, err := c.do(ctx, "POST", "/storage/buckets", payload, &bucket)
-	if err != nil {
-		return nil, err
-	}
-	return &bucket, nil
-}
-
-func (c *Client) GetBucket(ctx context.Context, name string) (*Bucket, error) {
-	// The API doesn't seem to have a direct GetBucket by name, but we can List and filter
-	buckets, err := c.ListBuckets(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for _, b := range buckets {
-		if b.Name == name {
-			return &b, nil
-		}
-	}
-	return nil, nil
-}
-
-func (c *Client) ListBuckets(ctx context.Context) ([]Bucket, error) {
-	var buckets []Bucket
-	_, err := c.do(ctx, "GET", "/storage/buckets", nil, &buckets)
-	if err != nil {
-		return nil, err
-	}
-	return buckets, nil
-}
-
-func (c *Client) DeleteBucket(ctx context.Context, name string) error {
-	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/storage/buckets/%s", name), nil, nil)
-	return err
-}
-
-func (c *Client) SetBucketVersioning(ctx context.Context, name string, enabled bool) error {
-	payload := map[string]bool{"enabled": enabled}
-	_, err := c.do(ctx, "PATCH", fmt.Sprintf("/storage/buckets/%s/versioning", name), payload, nil)
-	return err
-}
-
 // GlobalLB represents the API response for a Global Load Balancer
 type GlobalLB struct {
 	ID            string             `json:"id"`
@@ -1139,7 +1086,10 @@ func (c *Client) AddGlobalEndpoint(ctx context.Context, glbID string, req AddGlo
 
 func (c *Client) RemoveGlobalEndpoint(ctx context.Context, glbID, epID string) error {
 	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/global-lb/%s/endpoints/%s", glbID, epID), nil, nil)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // GatewayRoute represents the API response for a Gateway Route
@@ -1598,5 +1548,62 @@ func (c *Client) ListImages(ctx context.Context) ([]Image, error) {
 
 func (c *Client) DeleteImage(ctx context.Context, id string) error {
 	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/images/%s", id), nil, nil)
+	return err
+}
+
+// Bucket represents the API response for a Storage Bucket
+type Bucket struct {
+	ID                string `json:"id"`
+	Name              string `json:"name"`
+	IsPublic          bool   `json:"is_public"`
+	VersioningEnabled bool   `json:"versioning_enabled"`
+	EncryptionEnabled bool   `json:"encryption_enabled"`
+	CreatedAt         string `json:"created_at"`
+}
+
+func (c *Client) CreateBucket(ctx context.Context, name string, isPublic bool) (*Bucket, error) {
+	payload := map[string]interface{}{
+		"name":      name,
+		"is_public": isPublic,
+	}
+	var bucket Bucket
+	_, err := c.do(ctx, "POST", "/storage/buckets", payload, &bucket)
+	if err != nil {
+		return nil, err
+	}
+	return &bucket, nil
+}
+
+func (c *Client) GetBucket(ctx context.Context, name string) (*Bucket, error) {
+	// The API doesn't seem to have a direct GetBucket by name, but we can List and filter
+	buckets, err := c.ListBuckets(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, b := range buckets {
+		if b.Name == name {
+			return &b, nil
+		}
+	}
+	return nil, nil
+}
+
+func (c *Client) ListBuckets(ctx context.Context) ([]Bucket, error) {
+	var buckets []Bucket
+	_, err := c.do(ctx, "GET", "/storage/buckets", nil, &buckets)
+	if err != nil {
+		return nil, err
+	}
+	return buckets, nil
+}
+
+func (c *Client) DeleteBucket(ctx context.Context, name string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/storage/buckets/%s", name), nil, nil)
+	return err
+}
+
+func (c *Client) SetBucketVersioning(ctx context.Context, name string, enabled bool) error {
+	payload := map[string]bool{"enabled": enabled}
+	_, err := c.do(ctx, "PATCH", fmt.Sprintf("/storage/buckets/%s/versioning", name), payload, nil)
 	return err
 }
