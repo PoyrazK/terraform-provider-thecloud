@@ -1416,3 +1416,42 @@ func (c *Client) PurgeQueue(ctx context.Context, id string) error {
 	_, err := c.do(ctx, "POST", fmt.Sprintf("/queues/%s/purge", id), nil, nil)
 	return err
 }
+
+// Tenant represents the API response for a Tenant
+type Tenant struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Slug      string    `json:"slug"`
+	OwnerID   string    `json:"owner_id"`
+	Plan      string    `json:"plan"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (c *Client) CreateTenant(ctx context.Context, name, slug string) (*Tenant, error) {
+	payload := map[string]string{
+		"name": name,
+		"slug": slug,
+	}
+	var res Tenant
+	_, err := c.do(ctx, "POST", "/tenants", payload, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) GetTenant(ctx context.Context, id string) (*Tenant, error) {
+	// API doesn't seem to have direct GET /tenants/:id, usually handled by Listing or context
+	// For Terraform purposes, we might need a way to fetch specific tenant if supported
+	return nil, fmt.Errorf("getting specific tenant by ID not supported by API yet")
+}
+
+func (c *Client) ListTenants(ctx context.Context) ([]Tenant, error) {
+	var res []Tenant
+	_, err := c.do(ctx, "GET", "/tenants", nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
