@@ -115,6 +115,7 @@ func (p *TheCloudProvider) Resources(ctx context.Context) []func() resource.Reso
 		resources.NewGlobalLBEndpointResource,
 		resources.NewBucketResource,
 		resources.NewGatewayRouteResource,
+		resources.NewFunctionResource,
 	}
 }
 
@@ -132,6 +133,8 @@ func (p *TheCloudProvider) DataSources(ctx context.Context) []func() datasource.
 		datasources.NewBucketsDataSource,
 		datasources.NewGatewayRouteDataSource,
 		datasources.NewGatewayRoutesDataSource,
+		datasources.NewFunctionDataSource,
+		datasources.NewFunctionsDataSource,
 	}
 }
 
