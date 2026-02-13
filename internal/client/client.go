@@ -974,3 +974,100 @@ func (c *Client) UpgradeCluster(ctx context.Context, id string, version string) 
 	_, err := c.do(ctx, "POST", fmt.Sprintf("/clusters/%s/upgrade", id), payload, nil)
 	return err
 }
+
+// GlobalLB represents the API response for a Global Load Balancer
+type GlobalLB struct {
+	ID            string             `json:"id"`
+	Name          string             `json:"name"`
+	Hostname      string             `json:"hostname"`
+	Policy        string             `json:"routing_policy"`
+	Status        string             `json:"status"`
+	HealthCheck   GlobalHealthCheck  `json:"health_check"`
+	Endpoints     []GlobalEndpoint   `json:"endpoints,omitempty"`
+}
+
+type GlobalHealthCheck struct {
+	Protocol       string `json:"protocol"`
+	Port           int    `json:"port"`
+	Path           string `json:"path,omitempty"`
+	IntervalSec    int    `json:"interval_sec"`
+	TimeoutSec     int    `json:"timeout_sec"`
+	HealthyCount   int    `json:"healthy_count"`
+	UnhealthyCount int    `json:"unhealthy_count"`
+}
+
+type GlobalEndpoint struct {
+	ID         string `json:"id"`
+	Region     string `json:"region"`
+	TargetType string `json:"target_type"`
+	TargetID   string `json:"target_id,omitempty"`
+	TargetIP   string `json:"target_ip,omitempty"`
+	Weight     int    `json:"weight"`
+	Priority   int    `json:"priority"`
+	Healthy    bool   `json:"healthy"`
+}
+
+type CreateGlobalLBRequest struct {
+	Name        string            `json:"name"`
+	Hostname    string            `json:"hostname"`
+	Policy      string            `json:"policy"`
+	HealthCheck GlobalHealthCheck `json:"health_check"`
+}
+
+func (c *Client) CreateGlobalLB(ctx context.Context, req CreateGlobalLBRequest) (*GlobalLB, error) {
+	var glb GlobalLB
+	_, err := c.do(ctx, "POST", "/global-lb", req, &glb)
+	if err != nil {
+		return nil, err
+	}
+	return &glb, nil
+}
+
+func (c *Client) GetGlobalLB(ctx context.Context, id string) (*GlobalLB, error) {
+	var glb GlobalLB
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/global-lb/%s", id), nil, &glb)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	return &glb, nil
+}
+
+func (c *Client) ListGlobalLBs(ctx context.Context) ([]GlobalLB, error) {
+	var glbs []GlobalLB
+	_, err := c.do(ctx, "GET", "/global-lb", nil, &glbs)
+	if err != nil {
+		return nil, err
+	}
+	return glbs, nil
+}
+
+func (c *Client) DeleteGlobalLB(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/global-lb/%s", id), nil, nil)
+	return err
+}
+
+type AddGlobalEndpointRequest struct {
+	Region     string `json:"region"`
+	TargetType string `json:"target_type"`
+	TargetID   string `json:"target_id,omitempty"`
+	TargetIP   string `json:"target_ip,omitempty"`
+	Weight     int    `json:"weight,omitempty"`
+	Priority   int    `json:"priority,omitempty"`
+}
+
+func (c *Client) AddGlobalEndpoint(ctx context.Context, glbID string, req AddGlobalEndpointRequest) (*GlobalEndpoint, error) {
+	var ep GlobalEndpoint
+	_, err := c.do(ctx, "POST", fmt.Sprintf("/global-lb/%s/endpoints", glbID), req, &ep)
+	if err != nil {
+		return nil, err
+	}
+	return &ep, nil
+}
+
+func (c *Client) RemoveGlobalEndpoint(ctx context.Context, glbID, epID string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/global-lb/%s/endpoints/%s", glbID, epID), nil, nil)
+	return err
+}
