@@ -1187,3 +1187,81 @@ func (c *Client) DeleteGatewayRoute(ctx context.Context, id string) error {
 	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/gateway/routes/%s", id), nil, nil)
 	return err
 }
+
+// Function represents the API response for a serverless Function
+type Function struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Runtime   string    `json:"runtime"`
+	Handler   string    `json:"handler"`
+	CodePath  string    `json:"code_path"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+func (c *Client) CreateFunction(ctx context.Context, name, runtime, handler string, code []byte) (*Function, error) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	_ = writer.WriteField("name", name)
+	_ = writer.WriteField("runtime", runtime)
+	_ = writer.WriteField("handler", handler)
+
+	part, err := writer.CreateFormFile("code", "code.zip")
+	if err != nil {
+		return nil, err
+	}
+	_, _ = part.Write(code)
+	_ = writer.Close()
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.BuildURL("/functions"), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("X-API-Key", c.APIKey)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return nil, c.handleError(resp)
+	}
+
+	var res Function
+	if err := c.decodeResponse(resp, &res); err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+func (c *Client) GetFunction(ctx context.Context, id string) (*Function, error) {
+	var res Function
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/functions/%s", id), nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	return &res, nil
+}
+
+func (c *Client) ListFunctions(ctx context.Context) ([]Function, error) {
+	var res []Function
+	_, err := c.do(ctx, "GET", "/functions", nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (c *Client) DeleteFunction(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/functions/%s", id), nil, nil)
+	return err
+}
