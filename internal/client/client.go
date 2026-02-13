@@ -680,12 +680,15 @@ func (c *Client) DeleteSnapshot(ctx context.Context, id string) error {
 
 // Database represents the API response for a Database
 type Database struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Engine  string `json:"engine"`
-	Version string `json:"version"`
-	VpcID   string `json:"vpc_id,omitempty"`
-	Status  string `json:"status"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Engine           string `json:"engine"`
+	Version          string `json:"version"`
+	VpcID            string `json:"vpc_id,omitempty"`
+	Status           string `json:"status"`
+	Port             int    `json:"port"`
+	Username         string `json:"username"`
+	ConnectionString string `json:"connection_string,omitempty"`
 }
 
 func (c *Client) CreateDatabase(ctx context.Context, name, engine, version, vpcID string) (*Database, error) {
@@ -716,6 +719,15 @@ func (c *Client) GetDatabase(ctx context.Context, id string) (*Database, error) 
 
 	if status == http.StatusNotFound {
 		return nil, nil // nolint:nilnil
+	}
+
+	// Also fetch connection string
+	var connResp struct {
+		ConnectionString string `json:"connection_string"`
+	}
+	_, err = c.do(ctx, "GET", fmt.Sprintf("/databases/%s/connection", id), nil, &connResp)
+	if err == nil {
+		database.ConnectionString = connResp.ConnectionString
 	}
 
 	return &database, nil
