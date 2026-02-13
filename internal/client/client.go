@@ -1128,3 +1128,62 @@ func (c *Client) RemoveGlobalEndpoint(ctx context.Context, glbID, epID string) e
 	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/global-lb/%s/endpoints/%s", glbID, epID), nil, nil)
 	return err
 }
+
+// GatewayRoute represents the API response for a Gateway Route
+type GatewayRoute struct {
+	ID          string   `json:"id"`
+	Name        string   `json:"name"`
+	PathPrefix  string   `json:"path_prefix"`
+	TargetURL   string   `json:"target_url"`
+	Methods     []string `json:"methods"`
+	StripPrefix bool     `json:"strip_prefix"`
+	RateLimit   int      `json:"rate_limit"`
+	Priority    int      `json:"priority"`
+}
+
+type CreateRouteRequest struct {
+	Name        string   `json:"name"`
+	PathPrefix  string   `json:"path_prefix"`
+	TargetURL   string   `json:"target_url"`
+	Methods     []string `json:"methods,omitempty"`
+	StripPrefix bool     `json:"strip_prefix,omitempty"`
+	RateLimit   int      `json:"rate_limit,omitempty"`
+	Priority    int      `json:"priority,omitempty"`
+}
+
+func (c *Client) CreateGatewayRoute(ctx context.Context, req CreateRouteRequest) (*GatewayRoute, error) {
+	var route GatewayRoute
+	_, err := c.do(ctx, "POST", "/gateway/routes", req, &route)
+	if err != nil {
+		return nil, err
+	}
+	return &route, nil
+}
+
+func (c *Client) GetGatewayRoute(ctx context.Context, id string) (*GatewayRoute, error) {
+	// API doesn't seem to have direct GET /gateway/routes/:id, using List and filter
+	routes, err := c.ListGatewayRoutes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range routes {
+		if r.ID == id {
+			return &r, nil
+		}
+	}
+	return nil, nil
+}
+
+func (c *Client) ListGatewayRoutes(ctx context.Context) ([]GatewayRoute, error) {
+	var routes []GatewayRoute
+	_, err := c.do(ctx, "GET", "/gateway/routes", nil, &routes)
+	if err != nil {
+		return nil, err
+	}
+	return routes, nil
+}
+
+func (c *Client) DeleteGatewayRoute(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/gateway/routes/%s", id), nil, nil)
+	return err
+}
