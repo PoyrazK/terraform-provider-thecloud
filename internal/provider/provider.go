@@ -127,6 +127,8 @@ func (p *TheCloudProvider) DataSources(ctx context.Context) []func() datasource.
 		datasources.NewInstancesDataSource,
 		datasources.NewClusterDataSource,
 		datasources.NewClustersDataSource,
+		datasources.NewBucketDataSource,
+		datasources.NewBucketsDataSource,
 	}
 }
 
