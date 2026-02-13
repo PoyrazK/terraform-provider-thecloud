@@ -120,6 +120,7 @@ func (p *TheCloudProvider) Resources(ctx context.Context) []func() resource.Reso
 		resources.NewQueueResource,
 		resources.NewImageResource,
 		resources.NewDeploymentResource,
+		resources.NewTenantResource,
 	}
 }
 
