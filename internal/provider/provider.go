@@ -116,6 +116,8 @@ func (p *TheCloudProvider) Resources(ctx context.Context) []func() resource.Reso
 		resources.NewBucketResource,
 		resources.NewGatewayRouteResource,
 		resources.NewFunctionResource,
+		resources.NewCacheResource,
+		resources.NewQueueResource,
 	}
 }
 
