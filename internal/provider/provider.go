@@ -113,6 +113,7 @@ func (p *TheCloudProvider) Resources(ctx context.Context) []func() resource.Reso
 		resources.NewClusterResource,
 		resources.NewGlobalLBResource,
 		resources.NewGlobalLBEndpointResource,
+		resources.NewBucketResource,
 	}
 }
 
