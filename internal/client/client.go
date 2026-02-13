@@ -1277,3 +1277,141 @@ func (c *Client) DeleteFunction(ctx context.Context, id string) error {
 	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/functions/%s", id), nil, nil)
 	return err
 }
+
+// Cache represents the API response for a managed Cache
+type Cache struct {
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Engine           string `json:"engine"`
+	Version          string `json:"version"`
+	VpcID            string `json:"vpc_id,omitempty"`
+	Status           string `json:"status"`
+	Port             int    `json:"port"`
+	MemoryMB         int    `json:"memory_mb"`
+	ConnectionString string `json:"connection_string,omitempty"`
+}
+
+func (c *Client) CreateCache(ctx context.Context, name, version string, memoryMB int, vpcID string) (*Cache, error) {
+	payload := map[string]interface{}{
+		"name":      name,
+		"version":   version,
+		"memory_mb": memoryMB,
+	}
+	if vpcID != "" {
+		payload["vpc_id"] = vpcID
+	}
+	var res Cache
+	_, err := c.do(ctx, "POST", "/caches", payload, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) GetCache(ctx context.Context, id string) (*Cache, error) {
+	var res Cache
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/caches/%s", id), nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	// Also fetch connection string
+	var connResp struct {
+		ConnectionString string `json:"connection_string"`
+	}
+	_, err = c.do(ctx, "GET", fmt.Sprintf("/caches/%s/connection", id), nil, &connResp)
+	if err == nil {
+		res.ConnectionString = connResp.ConnectionString
+	}
+	return &res, nil
+}
+
+func (c *Client) ListCaches(ctx context.Context) ([]Cache, error) {
+	var res []Cache
+	_, err := c.do(ctx, "GET", "/caches", nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (c *Client) DeleteCache(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/caches/%s", id), nil, nil)
+	return err
+}
+
+func (c *Client) FlushCache(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "POST", fmt.Sprintf("/caches/%s/flush", id), nil, nil)
+	return err
+}
+
+// Queue represents the API response for a managed Queue
+type Queue struct {
+	ID                string `json:"id"`
+	Name              string `json:"name"`
+	ARN               string `json:"arn"`
+	VisibilityTimeout int    `json:"visibility_timeout"`
+	RetentionDays     int    `json:"retention_days"`
+	MaxMessageSize    int    `json:"max_message_size"`
+	Status            string `json:"status"`
+}
+
+type CreateQueueOptions struct {
+	VisibilityTimeout *int `json:"visibility_timeout,omitempty"`
+	RetentionDays     *int `json:"retention_days,omitempty"`
+	MaxMessageSize    *int `json:"max_message_size,omitempty"`
+}
+
+func (c *Client) CreateQueue(ctx context.Context, name string, opts CreateQueueOptions) (*Queue, error) {
+	payload := map[string]interface{}{
+		"name": name,
+	}
+	if opts.VisibilityTimeout != nil {
+		payload["visibility_timeout"] = *opts.VisibilityTimeout
+	}
+	if opts.RetentionDays != nil {
+		payload["retention_days"] = *opts.RetentionDays
+	}
+	if opts.MaxMessageSize != nil {
+		payload["max_message_size"] = *opts.MaxMessageSize
+	}
+	var res Queue
+	_, err := c.do(ctx, "POST", "/queues", payload, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *Client) GetQueue(ctx context.Context, id string) (*Queue, error) {
+	var res Queue
+	status, err := c.do(ctx, "GET", fmt.Sprintf("/queues/%s", id), nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	return &res, nil
+}
+
+func (c *Client) ListQueues(ctx context.Context) ([]Queue, error) {
+	var res []Queue
+	_, err := c.do(ctx, "GET", "/queues", nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (c *Client) DeleteQueue(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "DELETE", fmt.Sprintf("/queues/%s", id), nil, nil)
+	return err
+}
+
+func (c *Client) PurgeQueue(ctx context.Context, id string) error {
+	_, err := c.do(ctx, "POST", fmt.Sprintf("/queues/%s/purge", id), nil, nil)
+	return err
+}
